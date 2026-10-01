@@ -120,6 +120,12 @@ test('generate agrupa Conventional Commits por release, filtra ruido y es idempo
   assert.equal(JSON.parse(readFileSync(join(cwd, 'out.json'), 'utf8')).releases[0].version, '0.1.3')
   assert.equal(run('generate', 'out.json', '--check').status, 1)
   assert.equal(run('generate', 'out.json', '--release', 'x').status, 1)
+  assert.equal(run('generate', 'out.json', '--md', 'CHANGELOG.md').status, 0)
+  const md = readFileSync(join(cwd, 'CHANGELOG.md'), 'utf8')
+  assert.match(md, /^# Novedades\n\n/)
+  assert.match(md, /## \d{4}-\d{2}-\d{2} — v0\.1\.2\n\n### Mejoras\n\n- Acelerar listado/)
+  assert.doesNotMatch(md, /pendiente sin release/)
+  assert.equal(run('generate', 'out.json', '--md', 'CHANGELOG.md', '--check').status, 0)
 })
 
 test('lint-commit acepta Conventional Commits y rechaza el resto', (t) => {

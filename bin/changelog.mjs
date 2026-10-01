@@ -158,15 +158,22 @@ function generate(args) {
   const [out, ...flags] = args
   const option = (name) => { const i = flags.indexOf(name); return i === -1 ? undefined : flags[i + 1] }
   const check = flags.includes('--check')
-  if (!out || flags.some((f) => f.startsWith('--') && !['--check', '--since', '--release'].includes(f))) {
-    throw new Error('Uso: generate <ruta.json> [--since <sha>] [--release <versión>] [--check]')
+  if (!out || flags.some((f) => f.startsWith('--') && !['--check', '--since', '--release', '--md'].includes(f))) {
+    throw new Error('Uso: generate <ruta.json> [--md <CHANGELOG.md>] [--since <sha>] [--release <versión>] [--check]')
   }
   const version = option('--release')
   if (version !== undefined && !/^\d+\.\d+\.\d+[0-9A-Za-z.+-]*$/.test(version)) throw new Error('Versión no válida')
-  const json = `${JSON.stringify({ releases: buildReleases(readHistory(option('--since')), { release: version }) }, null, 2)}\n`
-  if (check) {
-    if (!existsSync(out) || readFileSync(out, 'utf8') !== json) throw new Error('JSON desactualizado; ejecuta generate')
-  } else if (!existsSync(out) || readFileSync(out, 'utf8') !== json) save(out, json)
+  const releases = buildReleases(readHistory(option('--since')), { release: version })
+  const outputs = [[out, `${JSON.stringify({ releases }, null, 2)}\n`]]
+  if (option('--md')) {
+    const body = releases.map((r) => renderRelease(r.date, r.title, r.sections)).join('')
+    outputs.push([option('--md'), `${HEADER}<!-- generado desde Git con Conventional Commits; no editar a mano -->\n\n${body}`])
+  }
+  for (const [path, content] of outputs) {
+    const same = existsSync(path) && readFileSync(path, 'utf8').replace(/\r\n/g, '\n') === content
+    if (check) { if (!same) throw new Error(`${path} desactualizado; ejecuta generate`) }
+    else if (!same) save(path, content)
+  }
 }
 
 function run([command, ...args]) {
@@ -220,7 +227,7 @@ function run([command, ...args]) {
     } else if (!existsSync(out) || readFileSync(out, 'utf8') !== json) save(out, json)
     return
   }
-  throw new Error('Uso: generate <ruta.json> [--since <sha>] [--release <versión>] [--check] | lint-commit <archivo> | init <sha> | plan | add <sha> <AAAA-MM-DD> <título> <borrador.json> | sync <ruta.json> [--check]')
+  throw new Error('Uso: generate <ruta.json> [--md <CHANGELOG.md>] [--since <sha>] [--release <versión>] [--check] | lint-commit <archivo> | init <sha> | plan | add <sha> <AAAA-MM-DD> <título> <borrador.json> | sync <ruta.json> [--check]')
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
