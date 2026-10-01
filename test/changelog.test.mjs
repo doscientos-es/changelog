@@ -130,6 +130,19 @@ test('generate agrupa Conventional Commits por release, filtra ruido y es idempo
   assert.equal(run('generate', 'out.json', '--md', 'CHANGELOG.md', '--check').status, 0)
 })
 
+test('generate falla en clon superficial salvo con --soft', (t) => {
+  const { cwd, commit } = fixture(t)
+  commit('feat: uno'); commit('feat: dos')
+  const shallow = mkdtempSync(join(tmpdir(), 'product-changelog-shallow-'))
+  t.after(() => rmSync(shallow, { recursive: true, force: true }))
+  execFileSync('git', ['clone', '-q', '--depth', '1', `file://${cwd.replace(/\\/g, '/')}`, shallow])
+  const run = (...args) => spawnSync(process.execPath, [cli, ...args], { cwd: shallow, encoding: 'utf8' })
+  assert.equal(run('generate', 'out.json').status, 1)
+  assert.equal(run('generate', 'out.json', '--soft').status, 0)
+  assert.equal(existsSync(join(shallow, 'out.json')), false)
+})
+
+
 test('lint-commit acepta Conventional Commits y rechaza el resto', (t) => {
   const { cwd, run } = fixture(t)
   const lint = (message) => {

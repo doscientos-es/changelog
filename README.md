@@ -32,7 +32,9 @@ changelog generate src/data/changelog.json --md CHANGELOG.md --check   # CI
 - El texto de cada entrada es la descripción del commit: escríbela pensando en
   quien usa el producto. Valida mensajes con `changelog lint-commit <archivo>`
   desde un hook `commit-msg`.
-- El pipeline necesita `fetch-depth: 0`; con un clon superficial falla.
+- El pipeline necesita `fetch-depth: 0`; con un clon superficial falla. En
+  `build` usa `--soft` para que, en plataformas que clonan con poca historia
+  (Vercel), se conserven los archivos versionados en lugar de fallar.
 
 El flujo incremental con `CHANGELOG.md` curado a mano (abajo) sigue disponible.
 

@@ -159,8 +159,13 @@ function generate(args) {
   const [out, ...flags] = args
   const option = (name) => { const i = flags.indexOf(name); return i === -1 ? undefined : flags[i + 1] }
   const check = flags.includes('--check')
-  if (!out || flags.some((f) => f.startsWith('--') && !['--check', '--since', '--release', '--md'].includes(f))) {
-    throw new Error('Uso: generate <ruta.json> [--md <CHANGELOG.md>] [--since <sha>] [--release <versión>] [--check]')
+  if (!out || flags.some((f) => f.startsWith('--') && !['--check', '--since', '--release', '--md', '--soft'].includes(f))) {
+    throw new Error('Uso: generate <ruta.json> [--md <CHANGELOG.md>] [--since <sha>] [--release <versión>] [--check] [--soft]')
+  }
+  // --soft: in shallow clones (e.g. Vercel) keep the committed files instead of failing.
+  if (flags.includes('--soft') && git('rev-parse', '--is-shallow-repository') === 'true') {
+    console.warn('Historia Git superficial; se conserva el changelog versionado')
+    return
   }
   const version = option('--release')
   if (version !== undefined && !/^\d+\.\d+\.\d+[0-9A-Za-z.+-]*$/.test(version)) throw new Error('Versión no válida')
