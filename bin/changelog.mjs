@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { execFileSync, spawnSync } from 'node:child_process'
-import { readFileSync, renameSync, writeFileSync, existsSync, openSync, closeSync, unlinkSync } from 'node:fs'
+import { readFileSync, renameSync, writeFileSync, existsSync, openSync, closeSync, unlinkSync, realpathSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -236,6 +236,10 @@ function run([command, ...args]) {
   throw new Error('Uso: generate <ruta.json> [--md <CHANGELOG.md>] [--since <sha>] [--release <versión>] [--check] | lint-commit <archivo> | init <sha> | plan | add <sha> <AAAA-MM-DD> <título> <borrador.json> | sync <ruta.json> [--check]')
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+// argv[1] can be a symlink (pnpm/npm .bin shims); import.meta.url is already resolved.
+const isMain = () => {
+  try { return realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url)) } catch { return false }
+}
+if (process.argv[1] && isMain()) {
   try { run(process.argv.slice(2)) } catch (error) { console.error(error.message); process.exitCode = 1 }
 }
