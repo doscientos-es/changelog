@@ -1,0 +1,46 @@
+{
+  "name": "@doscientos/changelog",
+  "version": "0.1.0",
+  "private": false,
+  "description": "CLI sin dependencias para changelogs incrementales desde Git y exportacion JSON",
+  "license": "Apache-2.0",
+  "author": "Doscientos <dev@doscientos.es>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/doscientos-es/changelog.git"
+  },
+  "homepage": "https://github.com/doscientos-es/changelog#readme",
+  "bugs": {
+    "url": "https://github.com/doscientos-es/changelog/issues"
+  },
+  "keywords": [
+    "changelog",
+    "git",
+    "release-notes",
+    "product"
+  ],
+  "type": "module",
+  "bin": {
+    "changelog": "bin/changelog.mjs"
+  },
+  "files": [
+    "bin/changelog.mjs",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "test": "node --test test/changelog.test.mjs",
+    "prepublishOnly": "npm test",
+    "release:check": "npm test && node --test test/package.test.mjs",
+    "version:major": "npm version major --no-git-tag-version",
+    "version:minor": "npm version minor --no-git-tag-version",
+    "version:patch": "npm version patch --no-git-tag-version"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@9.15.2"
+}
