@@ -21,6 +21,7 @@ test('el tarball contiene solo los archivos públicos esperados y se instala sin
     encoding: 'utf8',
   })
   assert.equal(packed.status, 0, packed.stderr)
+  assert.ok(packed.stdout.trim(), `npm pack sin salida JSON: ${packed.stderr}`)
   const [archive] = JSON.parse(packed.stdout)
   const { version } = JSON.parse(readFileSync(join(packageRoot, 'package.json'), 'utf8'))
   assert.equal(archive.filename, `doscientos-changelog-${version}.tgz`)
