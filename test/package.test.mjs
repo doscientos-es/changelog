@@ -51,10 +51,7 @@ test('el tarball contiene solo los archivos públicos esperados y se instala sin
   const base = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: project, encoding: 'utf8' }).trim()
   const init = spawnSync(process.execPath, [cli, 'init', base], { cwd: project, encoding: 'utf8' })
   assert.equal(init.status, 0, init.stderr)
-  const plan = runNpm(['exec', '--offline', '--', 'changelog', 'plan'], {
-    cwd: project,
-    encoding: 'utf8',
-  })
+  const plan = spawnSync(process.execPath, [cli, 'plan'], { cwd: project, encoding: 'utf8' })
   assert.equal(plan.status, 0, plan.stderr)
-  assert.deepEqual(JSON.parse(plan.stdout).commits, [])
+  assert.deepEqual(JSON.parse(plan.stdout).commits, [], plan.stdout)
 })
