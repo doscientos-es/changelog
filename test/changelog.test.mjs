@@ -92,3 +92,46 @@ test('sync genera el JSON sin necesitar metadatos Git', (t) => {
   assert.equal(result.status, 0, result.stderr)
   assert.equal(JSON.parse(readFileSync(join(cwd, 'changelog.json'), 'utf8')).releases[0].title, 'Novedad')
 })
+
+
+test('generate agrupa Conventional Commits por release, filtra ruido y es idempotente', (t) => {
+  const { cwd, commit, run } = fixture(t)
+  commit('chore: base')
+  commit('feat(leads): preparar preguntas de descubrimiento')
+  commit('fix: corregir envío de correo')
+  commit('chore(release): v0.1.1 [skip ci]')
+  commit('refactor: limpiar módulo')
+  commit('perf!: acelerar listado')
+  commit('mensaje sin formato')
+  commit('chore(release): v0.1.2 [skip ci]')
+  commit('feat: pendiente sin release')
+  assert.equal(run('generate', 'out.json').status, 0)
+  const { releases } = JSON.parse(readFileSync(join(cwd, 'out.json'), 'utf8'))
+  assert.deepEqual(releases.map((r) => r.version), ['0.1.2', '0.1.1'])
+  assert.deepEqual(releases[1].sections, [
+    { title: 'Nuevas funciones', items: ['Preparar preguntas de descubrimiento'] },
+    { title: 'Correcciones', items: ['Corregir envío de correo'] },
+  ])
+  assert.equal(releases[1].changes.find((c) => c.type === 'feat').scope, 'leads')
+  assert.equal(releases[0].changes[0].breaking, true)
+  assert.match(releases[1].date, /^\d{4}-\d{2}-\d{2}$/)
+  assert.equal(run('generate', 'out.json', '--check').status, 0)
+  assert.equal(run('generate', 'out.json', '--release', '0.1.3').status, 0)
+  assert.equal(JSON.parse(readFileSync(join(cwd, 'out.json'), 'utf8')).releases[0].version, '0.1.3')
+  assert.equal(run('generate', 'out.json', '--check').status, 1)
+  assert.equal(run('generate', 'out.json', '--release', 'x').status, 1)
+})
+
+test('lint-commit acepta Conventional Commits y rechaza el resto', (t) => {
+  const { cwd, run } = fixture(t)
+  const lint = (message) => {
+    writeFileSync(join(cwd, 'MSG'), message)
+    return run('lint-commit', 'MSG').status
+  }
+  assert.equal(lint('feat(ui)!: nuevo botón\n\nBREAKING CHANGE: x'), 0)
+  assert.equal(lint('# comentario\nfix: arreglo'), 0)
+  assert.equal(lint('Merge branch main'), 0)
+  assert.equal(lint('Add stuff'), 1)
+  assert.equal(lint('feature: algo'), 1)
+  assert.equal(lint('feat:sin espacio'), 1)
+})

@@ -89,7 +89,92 @@ export function renderRelease(date, title, sections) {
     `### ${s.title}\n\n${s.items.map((item) => `- ${item}`).join('\n')}\n\n`).join('')}`
 }
 
+// Conventional Commits: feat/fix/perf are user-facing; the rest never reach the changelog.
+const TYPE_CATEGORY = { feat: 'Nuevas funciones', fix: 'Correcciones', perf: 'Mejoras' }
+const COMMIT_TYPES = ['feat', 'fix', 'perf', 'refactor', 'docs', 'style', 'test', 'build', 'ci', 'chore', 'revert']
+const CONVENTIONAL = /^([a-z]+)(?:\(([^()\n]+)\))?(!)?: (\S.*)$/
+const RELEASE = /^chore\(release\): v?(\d+\.\d+\.\d+[0-9A-Za-z.+-]*)(?: \[skip ci\])?$/
+
+export function parseCommit(subject, body = '') {
+  const match = subject.match(CONVENTIONAL)
+  if (!match || !COMMIT_TYPES.includes(match[1])) return null
+  return {
+    type: match[1],
+    scope: match[2] ?? null,
+    breaking: Boolean(match[3]) || /^BREAKING[ -]CHANGE:/m.test(body),
+    description: match[4].trim(),
+  }
+}
+
+export function lintCommitMessage(message) {
+  const header = message.replace(/\r\n/g, '\n').split('\n').find((line) => line.trim() && !line.startsWith('#')) ?? ''
+  if (/^(Merge |Revert "|fixup! |squash! )/.test(header)) return
+  if (header.length > 100 || !parseCommit(header)) {
+    throw new Error(`Mensaje de commit no válido: "${header}"\nUsa Conventional Commits: <tipo>(<ámbito opcional>)!: <descripción>\nTipos: ${COMMIT_TYPES.join(', ')}`)
+  }
+}
+
+export function buildReleases(commits, { release, date } = {}) {
+  // commits: oldest first. A `chore(release): vX` commit closes the previous release.
+  const releases = []
+  let bucket = []
+  const close = (version, day) => {
+    const changes = bucket.reverse().filter((c) => TYPE_CATEGORY[c.type]).map(({ sha, type, scope, breaking, description }) =>
+      ({ sha, type, scope, breaking, description: description[0].toUpperCase() + description.slice(1) }))
+    bucket = []
+    if (!changes.length) return
+    const sections = categories.map((title) => ({
+      title,
+      items: changes.filter((c) => TYPE_CATEGORY[c.type] === title).map((c) => c.description),
+    })).filter((s) => s.items.length)
+    releases.unshift({ version, date: day, title: `v${version}`, sections, changes })
+  }
+  for (const c of commits) {
+    const boundary = c.subject.match(RELEASE)
+    if (boundary) close(boundary[1], c.date)
+    else {
+      const parsed = parseCommit(c.subject, c.body)
+      if (parsed) bucket.push({ sha: c.sha, ...parsed })
+    }
+  }
+  if (release && bucket.length) close(release, date ?? commits.at(-1).date)
+  return releases
+}
+
+function readHistory(since) {
+  if (git('rev-parse', '--is-shallow-repository') === 'true') {
+    throw new Error('Historia Git superficial; usa fetch-depth: 0 para generar el changelog')
+  }
+  const range = since ? [`${commit(since)}..HEAD`] : ['HEAD']
+  const raw = execFileSync('git', ['log', '--reverse', '--format=%H%x1f%cI%x1f%s%x1f%b%x1e', ...range],
+    { encoding: 'utf8', cwd: process.cwd() })
+  return raw.split('\x1e').map((r) => r.replace(/^\n/, '')).filter((r) => r.trim()).map((record) => {
+    const [sha, iso, subject, body = ''] = record.split('\x1f')
+    return { sha, date: iso.slice(0, 10), subject, body }
+  })
+}
+
+function generate(args) {
+  const [out, ...flags] = args
+  const option = (name) => { const i = flags.indexOf(name); return i === -1 ? undefined : flags[i + 1] }
+  const check = flags.includes('--check')
+  if (!out || flags.some((f) => f.startsWith('--') && !['--check', '--since', '--release'].includes(f))) {
+    throw new Error('Uso: generate <ruta.json> [--since <sha>] [--release <versión>] [--check]')
+  }
+  const version = option('--release')
+  if (version !== undefined && !/^\d+\.\d+\.\d+[0-9A-Za-z.+-]*$/.test(version)) throw new Error('Versión no válida')
+  const json = `${JSON.stringify({ releases: buildReleases(readHistory(option('--since')), { release: version }) }, null, 2)}\n`
+  if (check) {
+    if (!existsSync(out) || readFileSync(out, 'utf8') !== json) throw new Error('JSON desactualizado; ejecuta generate')
+  } else if (!existsSync(out) || readFileSync(out, 'utf8') !== json) save(out, json)
+}
+
 function run([command, ...args]) {
+  if (command === 'generate') return generate(args)
+  if (command === 'lint-commit') {
+    if (!args[0]) throw new Error('Uso: lint-commit <archivo-mensaje>')
+    return lintCommitMessage(readFileSync(resolve(args[0]), 'utf8'))
+  }
   // JSON projection only reads CHANGELOG.md; it must also work where builds
   // receive source files without Git history.
   const head = command === 'sync' ? null : commit('HEAD')
@@ -135,7 +220,7 @@ function run([command, ...args]) {
     } else if (!existsSync(out) || readFileSync(out, 'utf8') !== json) save(out, json)
     return
   }
-  throw new Error('Uso: init <sha> | plan | add <sha> <AAAA-MM-DD> <título> <borrador.json> | sync <ruta.json> [--check]')
+  throw new Error('Uso: generate <ruta.json> [--since <sha>] [--release <versión>] [--check] | lint-commit <archivo> | init <sha> | plan | add <sha> <AAAA-MM-DD> <título> <borrador.json> | sync <ruta.json> [--check]')
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
