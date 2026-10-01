@@ -106,6 +106,15 @@ export function parseCommit(subject, body = '') {
   }
 }
 
+// Legacy commits without a Conventional prefix: "Fix ..." -> fix, anything else -> feat.
+// Merges, reverts and fixup/squash commits are skipped.
+function parseLegacyCommit(subject) {
+  const text = subject.trim()
+  if (!text || /^(Merge |Revert "|fixup! |squash! )/.test(text)) return null
+  const type = /^(fix|fixed|fixes|resolve|resolved|correct|hotfix)\b/i.test(text) ? 'fix' : 'feat'
+  return { type, scope: null, breaking: false, description: text }
+}
+
 export function lintCommitMessage(message) {
   const header = message.replace(/\r\n/g, '\n').split('\n').find((line) => line.trim() && !line.startsWith('#')) ?? ''
   if (/^(Merge |Revert "|fixup! |squash! )/.test(header)) return
@@ -133,7 +142,7 @@ export function buildReleases(commits, { release, date } = {}) {
     const boundary = c.subject.match(RELEASE)
     if (boundary) close(boundary[1], c.date)
     else {
-      const parsed = parseCommit(c.subject, c.body)
+      const parsed = parseCommit(c.subject, c.body) ?? parseLegacyCommit(c.subject)
       if (parsed) bucket.push({ sha: c.sha, ...parsed })
     }
   }
