@@ -102,7 +102,8 @@ test('generate agrupa Conventional Commits por release, filtra ruido y es idempo
   commit('chore(release): v0.1.1 [skip ci]')
   commit('refactor: limpiar módulo')
   commit('perf!: acelerar listado')
-  commit('mensaje sin formato')
+  commit('Fix legacy bug')
+  commit('Add legacy thing')
   commit('chore(release): v0.1.2 [skip ci]')
   commit('feat: pendiente sin release')
   assert.equal(run('generate', 'out.json').status, 0)
@@ -115,7 +116,9 @@ test('generate agrupa Conventional Commits por release, filtra ruido y es idempo
     { title: 'Correcciones', items: ['Corregir envío de correo'] },
   ])
   assert.equal(releases[1].changes.find((c) => c.type === 'feat').scope, 'leads')
-  assert.equal(releases[0].changes[0].breaking, true)
+  assert.deepEqual(releases[0].changes.map((c) => [c.type, c.description]),
+    [['feat', 'Add legacy thing'], ['fix', 'Fix legacy bug'], ['perf', 'Acelerar listado']])
+  assert.equal(releases[0].changes[2].breaking, true)
   assert.match(releases[1].date, /^\d{4}-\d{2}-\d{2}$/)
   assert.equal(run('generate', 'out.json', '--check').status, 0)
   assert.equal(run('generate', 'out.json', '--release', '0.1.3').status, 0)
