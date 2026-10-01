@@ -1,6 +1,6 @@
 {
   "name": "@doscientos/changelog",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": false,
   "description": "CLI sin dependencias para changelogs incrementales desde Git y exportacion JSON",
   "license": "Apache-2.0",
