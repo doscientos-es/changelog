@@ -127,7 +127,7 @@ export function buildReleases(commits, { release, date } = {}) {
       title,
       items: changes.filter((c) => TYPE_CATEGORY[c.type] === title).map((c) => c.description),
     })).filter((s) => s.items.length)
-    releases.unshift({ version, date: day, title: `v${version}`, sections, changes })
+    releases.unshift({ version, date: day, title: version ? `v${version}` : 'Sin publicar', sections, changes })
   }
   for (const c of commits) {
     const boundary = c.subject.match(RELEASE)
@@ -137,7 +137,8 @@ export function buildReleases(commits, { release, date } = {}) {
       if (parsed) bucket.push({ sha: c.sha, ...parsed })
     }
   }
-  if (release && bucket.length) close(release, date ?? commits.at(-1).date)
+  // Commits after the last release boundary: named with --release, otherwise "Sin publicar" (version null).
+  if (bucket.length) close(release ?? null, date ?? commits.at(-1).date)
   return releases
 }
 

@@ -107,7 +107,9 @@ test('generate agrupa Conventional Commits por release, filtra ruido y es idempo
   commit('feat: pendiente sin release')
   assert.equal(run('generate', 'out.json').status, 0)
   const { releases } = JSON.parse(readFileSync(join(cwd, 'out.json'), 'utf8'))
-  assert.deepEqual(releases.map((r) => r.version), ['0.1.2', '0.1.1'])
+  assert.deepEqual(releases.map((r) => r.version), [null, '0.1.2', '0.1.1'])
+  assert.equal(releases[0].title, 'Sin publicar')
+  releases.shift()
   assert.deepEqual(releases[1].sections, [
     { title: 'Nuevas funciones', items: ['Preparar preguntas de descubrimiento'] },
     { title: 'Correcciones', items: ['Corregir envío de correo'] },
@@ -124,7 +126,7 @@ test('generate agrupa Conventional Commits por release, filtra ruido y es idempo
   const md = readFileSync(join(cwd, 'CHANGELOG.md'), 'utf8')
   assert.match(md, /^# Novedades\n\n/)
   assert.match(md, /## \d{4}-\d{2}-\d{2} — v0\.1\.2\n\n### Mejoras\n\n- Acelerar listado/)
-  assert.doesNotMatch(md, /pendiente sin release/)
+  assert.match(md, /— Sin publicar\n\n### Nuevas funciones\n\n- Pendiente sin release/)
   assert.equal(run('generate', 'out.json', '--md', 'CHANGELOG.md', '--check').status, 0)
 })
 

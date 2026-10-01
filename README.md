@@ -11,6 +11,32 @@ viven en la skill `product-changelog` de
 - Git y un repositorio con al menos un commit.
 - El changelog y el JSON generado se versionan junto con el proyecto.
 
+## Estándar: changelog desde Git (recomendado)
+
+Solo Git y Conventional Commits, sin edición manual ni LLM. En cada build o
+pipeline:
+
+```bash
+changelog generate src/data/changelog.json --md CHANGELOG.md
+changelog generate src/data/changelog.json --md CHANGELOG.md --check   # CI
+```
+
+- `feat` → Nuevas funciones, `fix` → Correcciones, `perf` → Mejoras. El resto
+  (`chore`, `refactor`, `docs`, `test`, `ci`…) no aparece.
+- Una release la cierra un commit `chore(release): vX.Y.Z`. Los commits
+  posteriores salen como `Sin publicar` (`version: null`), o con la versión que
+  pases en `--release <versión>`.
+- La fecha es la del commit. Cada cambio del JSON incluye `sha`, `type`,
+  `scope` y `breaking` (`!` o `BREAKING CHANGE:`) para que el frontend los
+  muestre como quiera.
+- El texto de cada entrada es la descripción del commit: escríbela pensando en
+  quien usa el producto. Valida mensajes con `changelog lint-commit <archivo>`
+  desde un hook `commit-msg`.
+- El pipeline necesita `fetch-depth: 0`; con un clon superficial falla.
+
+El flujo incremental con `CHANGELOG.md` curado a mano (abajo) sigue disponible.
+
+
 ## Instalar
 
 Instala el CLI compartido como dependencia de desarrollo:
