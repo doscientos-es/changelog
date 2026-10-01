@@ -128,7 +128,7 @@ test('generate agrupa Conventional Commits por release, filtra ruido y es idempo
   assert.equal(run('generate', 'out.json', '--md', 'CHANGELOG.md').status, 0)
   const md = readFileSync(join(cwd, 'CHANGELOG.md'), 'utf8')
   assert.match(md, /^# Novedades\n\n/)
-  assert.match(md, /## \d{4}-\d{2}-\d{2} — v0\.1\.2\n\n### Mejoras\n\n- Acelerar listado/)
+  assert.match(md, /## \d{4}-\d{2}-\d{2} — v0\.1\.2\n\n### Nuevas funciones\n\n- Add legacy thing\n\n### Mejoras\n\n- Acelerar listado/)
   assert.match(md, /— Sin publicar\n\n### Nuevas funciones\n\n- Pendiente sin release/)
   assert.equal(run('generate', 'out.json', '--md', 'CHANGELOG.md', '--check').status, 0)
 })
